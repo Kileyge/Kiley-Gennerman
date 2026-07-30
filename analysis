@@ -1,0 +1,38 @@
+# Stage 3 Build Audit — Scenario 4 EUR Receivable Hedge Model
+
+| Item | Detail |
+|---|---|
+| **Workbook** | `models/builds/2026-07-30-gennerman-scenario4-eur-receivable-model.xlsx` |
+| **Scenario** | U.S. aerospace manufacturer — €20,000,000 EUR receivable due in one year |
+| **Auditor / date** | Kiley Gennerman · 2026-07-30 |
+| **Result** | **PASS** — all live controls are passing after the corrections documented below. |
+
+## Audit method
+
+I compared the generated workbook with the Stage 2 technical specification, inspected the defined names and representative formulas, tested the eleven-row settlement-spot grid, and reviewed every worksheet visually. I also confirmed that the workbook’s **Audit Summary** tab mirrors these findings and draws its status values from the live Checks tab.
+
+## Findings and corrections
+
+| # | Check performed | Finding | Correction made | Evidence after correction |
+|---:|---|---|---|---|
+| 1 | Reconciled `USD_FWD` with `USD_MM` under the stated ACT/360 assumptions. | The original indicative forward rate of 1.0750 was inconsistent with the USD and EUR rates, so the parity test failed. | Replaced `F0_in` with the full covered-interest-parity value of 1.127327797440784 (displayed as 1.1273). | `PARITY_GAP` is effectively $0; both the Money Market and Checks tabs show **PASS**. |
+| 2 | Traced `USD_PUT_FLOOR` from Options to the sensitivity table. | The initial floor formula referenced the wrong column/range. | Linked the floor to `MIN('Sensitivity'!F13:F23)`, the `USD_PUT` results. | The $21,372,625 floor equals the minimum put proceeds in the sensitivity grid. |
+| 3 | Verified the Cover-page status link. | The Cover status cell pointed to the wrong address on the Checks tab. | Linked the Cover status to `='Checks'!F13`. | Cover, Checks, and Audit Summary each report **PASS**. |
+| 4 | Reviewed displayed formula explanations on calculation tabs. | Entries beginning with `=` were evaluated instead of shown as formula documentation. | Converted the documentation cells to literal formula text; underlying calculation cells remain formulas. | Formula logic is readable on Forward, Money Market, and Options tabs. |
+| 5 | Tested the call option across the full `S_T` range. | The first version showed the call only at the base spot, making its settlement-spot behavior hard to inspect. | Added an eleven-row call-reference schedule linked to the sensitivity grid. | Call payoff and capped payable outlay recalculate from −5% to +5% of `S0_in`. |
+
+## Final control results
+
+| Control | Result |
+|---|---|
+| All ten required named ranges point to Inputs-tab cells | PASS |
+| Forward / money-market parity within the $1 tolerance | PASS |
+| Forward and money-market proceeds remain constant across the grid | PASS |
+| No-hedge movement ties to notional × `S0_in` × sensitivity step | PASS |
+| Put base case ties from Options to Sensitivity | PASS |
+| Formula-error scan (`#REF!`, `#DIV/0!`, `#VALUE!`, `#NAME?`, `#N/A`) | PASS — none found |
+| Yellow inputs, blue assumptions, green formulas / checks, gray outputs | PASS |
+
+## Conclusion and Stage 4 handoff
+
+The workbook satisfies the Stage 3 build contract and is ready for Stage 4 market-data replacement. Before making any hedge recommendation, Treasury should replace the yellow indicative inputs with same-date, matching-tenor live quotes and rerun the **Checks** tab. Any failed parity check should be investigated for a tenor, date, rate-basis, or quote-convention mismatch.
