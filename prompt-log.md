@@ -1,32 +1,80 @@
-# Prompt Log
+# AI Prompt Log — FX Transaction Hedging Project
 
-## 2026-07-30 — Stage 2 Scenario 4 specification
+**Student:** Kiley Gennerman  
+**Course:** FIN 321 International Business Finance  
+**Scenario:** U.S. aerospace manufacturer — €20,000,000 EUR receivable due in one year
 
-**Prompt used:** “Draft a 2–3 page technical specification for Scenario 4: a U.S. aerospace manufacturer with a €20,000,000 EUR receivable due in one year. Follow the Stage 2 requirements: standardized named ranges, tab architecture, forward/money-market/put-option calculation flow, sensitivity plan, exact gray outputs, and validation checks. Mark all market values as indicative pending Stage 4 live data.”
+This log records how AI assistance was used as a drafting, model-building, and validation aid. Each output was reviewed, corrected where necessary, and retained only after it was reconciled to the project requirements and workbook controls.
 
-**Iteration recorded:** The first draft described the money-market hedge as a generic EUR borrowing/investment sequence and did not set an audit threshold. I corrected it before finalizing the spec.
+## Stage 2 — Technical specification
 
-- **Before:** “Compare the money-market result with the forward for parity.”
-- **After:** `EUR_BORROW = FC_AMT / DF_FC`; convert at `S0_in`; invest at `DF_USD`; calculate `PARITY_GAP = USD_MM − USD_FWD`; require `ABS(PARITY_GAP) <= 1.00` using unrounded values.
+**Purpose:** Produce a buildable design document before creating the workbook.
 
-This change makes the workbook formula sequence and acceptance criterion reproducible for the Stage 3 builder.
+**Prompt:**
 
-## 2026-07-30 — Stage 3 workbook build and audit
+> Draft a 2–3 page technical specification for Scenario 4: a U.S. aerospace manufacturer with a €20,000,000 EUR receivable due in one year. Follow the Stage 2 requirements: standardized named ranges, tab architecture, forward/money-market/put-option calculation flow, sensitivity plan, exact gray outputs, and validation checks. Mark all market values as indicative pending Stage 4 live data.
 
-**Prompt used:** “Build an Excel workbook exactly from `2026-07-30-gennerman-scenario4-eur-receivable-spec.md`. Include every required named range, all specified tabs, formula-driven forward, three-step money-market, put and call calculations, eleven-row sensitivity table and line chart, and visible validation checks. Apply the specified yellow/blue/green/gray convention.”
+**Output used:** `docs/specs/2026-07-30-gennerman-scenario4-eur-receivable-spec.md`
 
-**Specification correction before regeneration:** The original indicative forward placeholder of `1.0750` was inconsistent with the model’s own ACT/360 money-market assumptions and caused the required parity test to fail. It was corrected to `1.1273` (the rounded covered-interest-parity equivalent) in the specification; Stage 4 will still replace it with a matching-tenor live forward quote.
+**Human review and revision:** The initial money-market description was too general to be audited. It said, “Compare the money-market result with the forward for parity.” It was revised to state the exact three-step sequence—borrow `FC_AMT / DF_FC`, convert at `S0_in`, invest at `DF_USD`—and the test `ABS(PARITY_GAP) <= 1.00`. This made the calculation flow and acceptance threshold reproducible for the Stage 3 builder.
 
-**Audit outcomes:** Corrected the forward’s internal precision so parity passes within the $1 tolerance; repaired the put-floor sensitivity link and the Cover status link; and converted displayed formula notes to literal text so the audit trail remains readable. The final formula-error scan returned no errors and all live checks pass.
+## Stage 3 — Workbook build and audit
 
-**Rubric-completeness update:** Added a formula-driven call-reference schedule linked to each `S_T` scenario, so the call’s premium-backed payoff and USD outlay are directly inspectable rather than shown only at the base case.
+**Purpose:** Create the formula-driven workbook from the specification and audit the result.
 
-**Submission integration update:** Added an Audit Summary workbook tab that mirrors the required audit findings and links its status fields directly to the live Checks tab, so the workbook and written audit can be reviewed together.
+**Prompt:**
 
-**Audit-note rewrite:** Reorganized the written audit into a concise, evidence-led record that matches the Audit Summary tab: five specific findings, corrections, final control outcomes, and the Stage 4 handoff.
+> Build an Excel workbook exactly from `2026-07-30-gennerman-scenario4-eur-receivable-spec.md`. Include every required named range, all specified tabs, formula-driven forward, three-step money-market, put and call calculations, an eleven-row sensitivity table and line chart, and visible validation checks. Apply the yellow/blue/green/gray convention.
 
-## 2026-08-02 — Stage 4 market-data population
+**Output used:** `models/builds/2026-07-30-gennerman-scenario4-eur-receivable-model.xlsx`
 
-**Prompt used:** “Populate the Scenario 4 EUR receivable workbook with dated, reputable EUR/USD spot and reference-rate data; compute a CIP-implied one-year forward if an executable free forward quote is unavailable; retain the assignment option premia; document sources, dates, proxy logic, and validation results.”
+**Human review and audit fixes:**
 
-**Outcome:** Loaded ECB EUR/USD reference spot (1.1389), FRED 1-year U.S. Treasury CMT (4.06%), and the ECB deposit facility proxy (2.25%). The one-year forward was computed as 1.1593342407 under the workbook’s ACT/360 CIP formula. The model checks passed after population; full provenance and the lab-access limitation are recorded in `data/2026-08-02-gennerman-market-data.md`.
+1. The indicative 1.0750 forward was inconsistent with the stated ACT/360 inputs and failed the parity control. It was replaced with the full CIP value in the Stage 2 design, then later replaced with dated Stage 4 data.
+2. The put-floor output initially pointed to the wrong sensitivity range. It was relinked to the `USD_PUT` column.
+3. The Cover status cell pointed to the wrong checks cell. It was relinked to the live overall-model-status output.
+4. Formula descriptions were evaluating instead of displaying as documentation. They were converted to literal text while the actual calculation cells stayed formula-driven.
+5. The call was initially visible only at the base spot. An eleven-row call reference schedule was added so its payoff and payable outlay recalculate at each `S_T` scenario.
+
+**Audit evidence:** `analysis/2026-07-30-gennerman-build-audit.md` and the workbook’s **Audit Summary** tab.
+
+## Stage 4 — Market-data population
+
+**Purpose:** Replace placeholders with dated market inputs and test the model with live-data proxies.
+
+**Prompt:**
+
+> Populate the Scenario 4 EUR receivable workbook with dated, reputable EUR/USD spot and reference-rate data; compute a CIP-implied one-year forward if an executable free forward quote is unavailable; retain the assignment option premia; document sources, dates, proxy logic, and validation results.
+
+**Human review and sourcing decisions:**
+
+- Used the ECB EUR/USD reference rate of 1.1389 USD/EUR.
+- Used the FRED 1-year U.S. Treasury CMT of 4.06% as the USD reference-rate proxy.
+- Used the 2.25% ECB deposit facility as the EUR reference-rate proxy, explicitly noting that it is an overnight policy rate rather than a one-year funding quote.
+- Computed `F0_in = 1.1593342407` through the specified ACT/360 CIP formula because an accessible executable one-year EUR/USD forward was unavailable.
+- Retained the $0.0300-per-EUR put and call premiums as scenario assumptions, as directed.
+
+**Output used:** `data/2026-08-02-gennerman-market-data.md`
+
+**Validation result:** Forward and money-market proceeds reconciled at $23,186,684.81; the parity gap was $0.00 within the workbook’s $1 tolerance; all workbook checks passed. The course lab was not available in the working environment, so the memo records an independent arithmetic reconciliation and a clear follow-up instruction.
+
+## Stage 5 — Independent analysis and executive recommendation
+
+**Purpose:** Recalculate the outcomes from the specification and market-data memo, compare them with the workbook, and make a CFO recommendation.
+
+**Prompt:**
+
+> Using only the attached FX hedge model technical specification and market-data memo, independently calculate the EUR receivable hedge outcomes. Evaluate no hedge, forward, money-market hedge, EUR put option, and the EUR call payable-reference outcome at the low, base, and high settlement-spot scenarios. Explain assumptions, identify ambiguities, and recommend a hedge for the CFO. Do not rely on a workbook or any prior result.
+
+**Human review and conclusion:** The independent analysis reconciled all tested forward, money-market, put, call-reference, and unhedged outcomes to the populated workbook with zero differences. The review also identified specification improvements: define a hierarchy for rate proxies, distinguish a dealer forward from a CIP-implied forward, and label the call more prominently as payable-reference only.
+
+**Outputs used:**
+
+- `analysis/2026-08-02-gennerman-scenario4-eur-receivable-validation.md`
+- `docs/decisions/2026-08-02-gennerman-scenario4-eur-receivable-hedge-recommendation.md`
+
+**Recommendation:** Sell the €20,000,000 receivable forward. It locks approximately $23.187 million of USD proceeds, matches the money-market hedge economically without its borrowing/investment mechanics, and is preferable to paying the put premium when budget certainty is the primary objective.
+
+## Responsible-use statement
+
+AI accelerated drafting, calculation review, and documentation. The student remained responsible for verifying market-data choices, testing formulas, documenting limitations, interpreting trade-offs, and approving the final recommendation. This project is an educational analysis and not authorization to execute a financial transaction.
